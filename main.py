@@ -13,13 +13,16 @@ from fastapi.staticfiles import StaticFiles
 
 BASE_DIR = Path(__file__).resolve().parent
 HLS_DIR = BASE_DIR / "hls"
+STATIC_DIR = BASE_DIR / "static"
 INDEX_HTML = BASE_DIR / "index.html"
 
 app = FastAPI()
 
-# Serve the HLS playlist + segments
 HLS_DIR.mkdir(parents=True, exist_ok=True)
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
 app.mount("/hls", StaticFiles(directory=str(HLS_DIR)), name="hls")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 # ---- FFmpeg process management ----
