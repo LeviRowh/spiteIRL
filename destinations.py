@@ -1,8 +1,11 @@
 # look into what overlays ffmpeg offer natively.
 """
 destinations.py — manages restream destinations (Twitch, YouTube, custom RTMP)
-Each destination gets its own FFmpeg process that reads the HLS playlist
-and forwards the stream to the platform's RTMP ingest URL.
+Each destination gets its own FFmpeg process that captures DIRECTLY from the
+device and sends full quality video to the platform's RTMP ingest URL.
+
+The HLS preview in main.py is a separate, low res stream destinations are
+completely independent of it.
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-# RTMP ingest URLs for known platforms
+# ── RTMP ingest URLs for known platforms ──────────────────────────────────────
 PLATFORM_RTMP: dict[str, str] = {
     "twitch":  "rtmp://live.twitch.tv/app/{key}",
     "youtube": "rtmp://a.rtmp.youtube.com/live2/{key}",
@@ -26,14 +29,27 @@ PLATFORM_RTMP: dict[str, str] = {
 BASE_DIR = Path(__file__).resolve().parent
 
 
-# Data model 
+#  capture config 
+# Passed in from main.py so destinations know how to open the same device.
+
+@dataclass
+class CaptureConfig:
+    """
+    Describes how FFmpeg should open the capture device.
+    main.py fills this in and passes it to start_all().
+    """
+    input_flags: list[str]   # e.g. ["-f", "avfoundation", "-framerate", "30", "-video_size", "1280x720", "-i", "0:0"]
+    encode_flags: list[str]  # e.g. ["-c:v", "h264_videotoolbox", "-b:v", "6000k", ...]
+
+
+# data model
 
 @dataclass
 class Destination:
     id: str
     platform: str          # "twitch" | "youtube" | "custom"
     stream_key: str        # stream key, or full RTMP URL for "custom"
-    label: str             # friendly name shown in the UI like Lj's twitch
+    label: str             # friendly name shown in the UI
     enabled: bool = True
     _proc: Optional[subprocess.Popen] = field(default=None, repr=False, compare=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
@@ -52,11 +68,11 @@ class Destination:
             "label":    self.label,
             "enabled":  self.enabled,
             "running":  self.is_running(),
-            # Never expose the stream key over the API
+            # never expose the stream key over the API
         }
 
 
-#  In memory store (good enough for the prototype for now) 
+# in memory store (good enough for a prototype) 
 
 _destinations: dict[str, Destination] = {}
 _store_lock = threading.Lock()
@@ -104,27 +120,28 @@ def set_enabled(dest_id: str, enabled: bool) -> Optional[Destination]:
     return dest
 
 
-# FFmpeg per destination re stream process
+# ── FFmpeg per-destination capture+stream process ───────────────────
 
-def _restream_cmd(dest: Destination, hls_path: str) -> list[str]:
+def _restream_cmd(dest: Destination, cfg: CaptureConfig) -> list[str]:
     """
-    Reads the HLS playlist produced by the main FFmpeg capture process and
-    forwards it to the destination RTMP URL.
+    Captures directly from the device (same source as the HLS preview but not the actual HLS preview) and
+    sends full quality video straight to the destination RTMP URL.
 
-    We use '-re' so FFmpeg reads at native speed (important for live HLS),
-    and '-c copy' so there is zero re-encoding — very low CPU overhead.
+    Using the device directly means destinations get the full bitrate
+    stream regardless of how degraded the HLS preview is.
     """
     return [
         "ffmpeg",
         "-hide_banner",
         "-loglevel", "warning",
 
-        # Read the local HLS playlist at real time speed
-        "-re",
-        "-i", hls_path,
+        # Open the capture device (avfoundation / v4l2 / dshow etc.)
+        *cfg.input_flags,
 
-        # Copy streams... no reencoding it
-        "-c", "copy",
+        "-use_wallclock_as_timestamps", "1",
+
+        # Full-quality encode flags from main.py
+        *cfg.encode_flags,
 
         # Output as FLV to RTMP (required by Twitch/YouTube)
         "-f", "flv",
@@ -156,9 +173,9 @@ def _stop_dest(dest: Destination) -> None:
             dest._proc = None
 
 
-def start_all(hls_playlist: str) -> list[str]:
+def start_all(cfg: CaptureConfig) -> list[str]:
     """
-    Start restream processes for all enabled destinations.
+    Start a direct-capture restream process for all enabled destinations.
     Returns list of destination IDs that were successfully started.
     """
     started = []
@@ -170,8 +187,8 @@ def start_all(hls_playlist: str) -> list[str]:
             continue
         with dest._lock:
             if dest.is_running():
-                continue  
-            cmd = _restream_cmd(dest, hls_playlist)
+                continue  # already going
+            cmd = _restream_cmd(dest, cfg)
             try:
                 if os.name == "nt":
                     dest._proc = subprocess.Popen(
@@ -187,7 +204,6 @@ def start_all(hls_playlist: str) -> list[str]:
                     )
                 started.append(dest.id)
             except FileNotFoundError:
-                # FFmpeg not found - propagate to caller instead of just printing an error, since this is a critical failure
                 raise
             except Exception as exc:
                 print(f"[destinations] Failed to start {dest.label}: {exc}")
