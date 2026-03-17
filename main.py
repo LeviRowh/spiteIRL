@@ -8,15 +8,50 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+import destinations as dest_mgr
+from destinations import CaptureConfig
 
 BASE_DIR = Path(__file__).resolve().parent
 HLS_DIR = BASE_DIR / "hls"
 STATIC_DIR = BASE_DIR / "static"
 INDEX_HTML = BASE_DIR / "index.html"
 
+CAPTURE_CONFIG = CaptureConfig(
+    input_flags=[
+        "-f", "avfoundation",
+        "-framerate", "30",
+        "-video_size", "1280x720",
+        "-i", "0:0",
+    ],
+    encode_flags=[
+        "-c:v", "h264_videotoolbox",
+        "-b:v", "6000k",
+        "-maxrate", "6500k",
+        "-bufsize", "12000k",
+        "-g", "60",
+        "-keyint_min", "60",
+        "-sc_threshold", "0",
+        "-c:a", "aac",
+        "-b:a", "160k",
+        "-ar", "48000",
+        "-ac", "2",
+        "-af", "aresample=async=1:min_hard_comp=0.100:first_pts=0",
+    ],
+)
+
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 HLS_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -96,7 +131,10 @@ def home():
 
 @app.get("/api/status")
 def status():
-    return {"running": _is_running()}
+    return {
+        "running": _is_running(),
+        "destinations": [d.to_dict() for d in dest_mgr.get_destinations()],
+    }
 
 
 @app.post("/api/start")
@@ -133,12 +171,26 @@ def start():
                 detail="ffmpeg not found. Install FFmpeg and make sure it's on PATH.",
             )
 
+    def _delayed_restream():
+        import time
+        time.sleep(3)
+        try:
+            started = dest_mgr.start_all(CAPTURE_CONFIG)
+            if started:
+                print(f"[destinations] Restreaming started for {len(started)} destination(s).")
+        except FileNotFoundError:
+            print("[destinations] ffmpeg not found — restream skipped.")
+
+    threading.Thread(target=_delayed_restream, daemon=True).start()
+
     return {"running": True, "message": "started"}
 
 
 @app.post("/api/stop")
 def stop():
     global ffmpeg_proc
+
+    dest_mgr.stop_all()
 
     with ffmpeg_lock:
         if not _is_running():
@@ -167,3 +219,56 @@ def stop():
             ffmpeg_proc = None
 
     return {"running": False, "message": "stopped"}
+
+
+# ---- Destination management ----
+
+class DestinationCreate(BaseModel):
+    platform: str
+    stream_key: str
+    label: str
+
+class DestinationUpdate(BaseModel):
+    enabled: bool
+
+@app.get("/api/destinations")
+def list_destinations():
+    return [d.to_dict() for d in dest_mgr.get_destinations()]
+
+@app.post("/api/destinations", status_code=201)
+def create_destination(body: DestinationCreate):
+    try:
+        dest = dest_mgr.add_destination(
+            platform=body.platform,
+            stream_key=body.stream_key,
+            label=body.label,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if _is_running():
+        try:
+            dest_mgr.start_all(CAPTURE_CONFIG)
+        except Exception:
+            pass
+    return dest.to_dict()
+
+@app.patch("/api/destinations/{dest_id}")
+def update_destination(dest_id: str, body: DestinationUpdate):
+    dest = dest_mgr.set_enabled(dest_id, body.enabled)
+    if dest is None:
+        raise HTTPException(status_code=404, detail="Destination not found")
+    if body.enabled and _is_running():
+        try:
+            dest_mgr.start_all(CAPTURE_CONFIG)
+        except Exception:
+            pass
+    if not body.enabled:
+        dest_mgr._stop_dest(dest)
+    return dest.to_dict()
+
+@app.delete("/api/destinations/{dest_id}")
+def delete_destination(dest_id: str):
+    removed = dest_mgr.remove_destination(dest_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Destination not found")
+    return {"deleted": True}
