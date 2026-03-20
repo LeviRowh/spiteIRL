@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,10 +16,15 @@ from pydantic import BaseModel
 import destinations as dest_mgr
 from destinations import CaptureConfig
 
+import mysql.connector
+from typing import Annotated
+from fastapi.responses import RedirectResponse
+
 BASE_DIR = Path(__file__).resolve().parent
 HLS_DIR = BASE_DIR / "hls"
 STATIC_DIR = BASE_DIR / "static"
 INDEX_HTML = BASE_DIR / "index.html"
+LOGIN_HTML = BASE_DIR / "login.html"
 
 CAPTURE_CONFIG = CaptureConfig(
     input_flags=[
@@ -123,9 +128,12 @@ def _is_running() -> bool:
     global ffmpeg_proc
     return ffmpeg_proc is not None and ffmpeg_proc.poll() is None
 
-
 @app.get("/", response_class=HTMLResponse)
-def home():
+def login():
+    return HTMLResponse(LOGIN_HTML.read_text(encoding="utf-8"))
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
     return HTMLResponse(INDEX_HTML.read_text(encoding="utf-8"))
 
 
@@ -272,3 +280,26 @@ def delete_destination(dest_id: str):
     if not removed:
         raise HTTPException(status_code=404, detail="Destination not found")
     return {"deleted": True}
+
+@app.post("/login")
+async def login(username: Annotated[str, Form()], password: Annotated[str, Form()]):
+
+    spitedb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="password",
+        database="spite"
+    )
+
+    spitecursor = spitedb.cursor()
+
+    spitecursor.execute('SELECT * FROM users WHERE username = %s AND password = %s', (username, password))
+    account = spitecursor.fetchone()
+
+    if account:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    else:
+        return HTMLResponse("""
+            <h2>Login Failed</h2>
+            <a href="/login">Try again</a>
+        """)
