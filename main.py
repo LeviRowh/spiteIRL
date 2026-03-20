@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Form
+from fastapi import FastAPI, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -133,7 +133,12 @@ def login():
     return HTMLResponse(LOGIN_HTML.read_text(encoding="utf-8"))
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard():
+def dashboard(request: Request):
+    user = request.cookies.get("user")
+
+    if not user:
+        return RedirectResponse(url="/")
+
     return HTMLResponse(INDEX_HTML.read_text(encoding="utf-8"))
 
 
@@ -297,9 +302,17 @@ async def login(username: Annotated[str, Form()], password: Annotated[str, Form(
     account = spitecursor.fetchone()
 
     if account:
-        return RedirectResponse(url="/dashboard", status_code=303)
+        response = RedirectResponse(url="/dashboard", status_code=303)
+        response.set_cookie(key="user", value=username)
+        return response
     else:
         return HTMLResponse("""
             <h2>Login Failed</h2>
-            <a href="/login">Try again</a>
+            <a href="/">Try again</a>
         """)
+    
+@app.get("/logout")
+def logout():
+    response = RedirectResponse(url="/")
+    response.delete_cookie("user")
+    return response
