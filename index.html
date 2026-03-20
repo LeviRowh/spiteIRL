@@ -13,8 +13,8 @@
   <body>
     <div class="wrap">
       <div class="panel">
+        <h3>Preview</h3>
         <video id="v" autoplay muted playsinline controls></video>
-
         <div class="row">
           <button id="start">Start stream</button>
           <button id="stop">Stop stream</button>
@@ -30,6 +30,23 @@
           Autoplay usually requires muted video. This starts muted; use Unmute if needed.
           Stream path: <code>/hls/stream.m3u8</code>
         </div>
+      </div>
+      <div class="panel">
+        <h3>Destination Streaming</h3>
+        <div class="row">
+          <select id="platform">
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+            <option value="custom">Custom RTMP</option>
+          </select>
+
+          <input id="destLabel" type="text" placeholder="Label (ex: My YouTube)" />
+          <input id="streamKey" type="text" placeholder="Stream key or RTMP URL" />
+          <button id="addDestination">Add Destination</button>
+        </div>
+
+        <div id="destStatus"></div>
+        <div id="destinationList"></div>
       </div>
     </div>
   </body>

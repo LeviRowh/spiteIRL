@@ -189,10 +189,15 @@ def start():
         time.sleep(3)
         try:
             started = dest_mgr.start_all(CAPTURE_CONFIG)
+            print("[destinations] started ids:", started)
             if started:
                 print(f"[destinations] Restreaming started for {len(started)} destination(s).")
+            else:
+                print("[destinations] No destinations were started.")
         except FileNotFoundError:
             print("[destinations] ffmpeg not found — restream skipped.")
+        except Exception as exc:
+            print("[destinations] Restream failed:", exc)
 
     threading.Thread(target=_delayed_restream, daemon=True).start()
 
