@@ -8,12 +8,16 @@
     </head>
     <body>
         <h2>Login</h2>
-        <form method="post" action="/login">
+        <form method="post">
             <label for="fname">Username:</label><br>
             <input type="text" id="username" name="username"><br><br>
+
             <label for="lname">Password:</label><br>
             <input type="password" id="password" name="password"><br><br>
-            <input type="submit" value="Submit">
+
+            <button type="submit" formaction="/login">Login</button>
+            <button type="submit" formaction="/register">Create Account</button>
         </form>
+
     </body>
 </html>

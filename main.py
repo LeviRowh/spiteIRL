@@ -286,20 +286,22 @@ def delete_destination(dest_id: str):
         raise HTTPException(status_code=404, detail="Destination not found")
     return {"deleted": True}
 
-@app.post("/login")
-async def login(username: Annotated[str, Form()], password: Annotated[str, Form()]):
-
-    spitedb = mysql.connector.connect(
+def get_db():
+    db = mysql.connector.connect(
         host="localhost",
         user="root",
         password="password",
         database="spite"
     )
+    cursor = db.cursor()
+    return db, cursor
 
-    spitecursor = spitedb.cursor()
+@app.post("/login")
+async def login(username: Annotated[str, Form()], password: Annotated[str, Form()]):
+    db, cursor = get_db()
 
-    spitecursor.execute('SELECT * FROM users WHERE username = %s AND password = %s', (username, password))
-    account = spitecursor.fetchone()
+    cursor.execute('SELECT * FROM users WHERE username = %s AND password = %s', (username, password))
+    account = cursor.fetchone()
 
     if account:
         response = RedirectResponse(url="/dashboard", status_code=303)
@@ -311,6 +313,24 @@ async def login(username: Annotated[str, Form()], password: Annotated[str, Form(
             <a href="/">Try again</a>
         """)
     
+@app.post("/register")
+async def register(username: Annotated[str, Form()], password: Annotated[str, Form()]):
+    db, cursor = get_db()
+
+    cursor.execute("SELECT * FROM Users WHERE username = %s", (username,))
+    existing = cursor.fetchone()
+
+    if existing:
+        return HTMLResponse("<h2>User already exists</h2><a href='/'>Go back</a>")
+
+    cursor.execute(
+        "INSERT INTO Users (username, password) VALUES (%s, %s)",
+        (username, password)
+    )
+    db.commit()
+
+    return RedirectResponse(url="/dashboard", status_code=303)
+
 @app.get("/logout")
 def logout():
     response = RedirectResponse(url="/")
