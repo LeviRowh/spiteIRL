@@ -134,6 +134,7 @@ def _restream_cmd(dest: Destination, cfg: CaptureConfig) -> list[str]:
         "ffmpeg",
         "-hide_banner",
         "-loglevel", "warning",
+        "-report",
 
         # Open the capture device (avfoundation / v4l2 / dshow etc.)
         *cfg.input_flags,
