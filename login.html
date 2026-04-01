@@ -6,18 +6,22 @@
         <link rel="stylesheet" href="/static/style.css">
         <title>Spite Login</title>
     </head>
-    <body>
-        <h2>Login</h2>
-        <form method="post">
-            <label for="fname">Username:</label><br>
-            <input type="text" id="username" name="username"><br><br>
+    <header role="Banner">
+        <h2 id="title">Spite IRL</h2>
+    </header>
+    <main>
+        <div class="block">
+            <h2>Login</h2>
+            <form method="post">
+                <label for="username">Username:</label><input type="text" id="username" name="username"><br><br>
 
-            <label for="lname">Password:</label><br>
-            <input type="password" id="password" name="password"><br><br>
+                <label for="password">Password:</label><input type="password" id="password" name="password"><br><br>
 
-            <button type="submit" formaction="/login">Login</button>
-            <button type="submit" formaction="/register">Create Account</button>
-        </form>
-
-    </body>
+                <div>
+                    <button type="submit" formaction="/login">Login</button>
+                    <button type="submit" formaction="/register">Create Account</button>
+                </div>
+            </form>
+        </div>
+    </main>
 </html>

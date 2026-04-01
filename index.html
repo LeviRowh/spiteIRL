@@ -1,53 +1,53 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/webAppCommands.js" defer></script>
-    <title>Live Preview (HLS + FastAPI Controls)</title>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <link rel="stylesheet" href="static/style.css">
+        <script src="/static/webAppCommands.js" defer></script>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        <title>Spite Dashboard</title>
+    </head>
+    <body>
+        <!--Wrapper-->
+        <main>
+            <!--Header + Logout-->
+            <header role="Banner">
+                <h2 id="title">Spite IRL</h2>
+                <form id="logout" action="/logout" method="get" style="display:inline;">
+                    <button type="submit">Logout</button>
+                </form>
+            </header>
+            <!--Preview Block-->
+            <div class="block" role="main">
+                <h3>Preview</h3>
+                <video id="v" autoplay muted playsinline controls></video>
+                <!--Buttons-->
+                <div>
+                    <button id="start">Start stream</button>
+                    <button id="stop">Stop stream</button>
+                </div>
+                <div class="status" id="status">Status: Stopped</div>
+            </div>
+            <!--Destinations-->
+            <div class="block" role="contentinfo">
+                <h3>Destination Streaming</h3>
+                <!--Destination Select-->
+                <div class="row">
+                    <label for="platform">Platform:</label><select id="platform">
+                        <option value="twitch">Twitch</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="custom">Custom RTMP</option>
+                    </select>
 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  </head>
-
-  <body>
-    <div class="wrap">
-      <div class="panel">
-        <h3>Preview</h3>
-        <video id="v" autoplay muted playsinline controls></video>
-        <div class="row">
-          <button id="start">Start stream</button>
-          <button id="stop">Stop stream</button>
-          <button id="reload">Reload player</button>
-          <button id="unmute">Unmute</button>
-          <form action="/logout" method="get" style="display:inline;">
-            <button type="submit">Logout</button>
-          </form>
-          <div class="status" id="status">Status: unknown</div>
-        </div>
-
-        <div class="hint">
-          Autoplay usually requires muted video. This starts muted; use Unmute if needed.
-          Stream path: <code>/hls/stream.m3u8</code>
-        </div>
-      </div>
-      <div class="panel">
-        <h3>Destination Streaming</h3>
-        <div class="row">
-          <select id="platform">
-            <option value="twitch">Twitch</option>
-            <option value="youtube">YouTube</option>
-            <option value="custom">Custom RTMP</option>
-          </select>
-
-          <input id="destLabel" type="text" placeholder="Label (ex: My YouTube)" />
-          <input id="streamKey" type="text" placeholder="Stream key or RTMP URL" />
-          <button id="addDestination">Add Destination</button>
-        </div>
-
-        <div id="destStatus"></div>
-        <div id="destinationList"></div>
-      </div>
-    </div>
-  </body>
+                    <input id="destLabel" type="text" placeholder="Label (ex: My YouTube)" />
+                    <input id="streamKey" type="text" placeholder="Stream key or RTMP URL" />
+                    <button id="addDestination">Add Destination</button>
+                </div>
+                <!--Destination Status-->
+                <div id="destStatus"></div>
+                <div id="destinationList"></div>
+            </div>
+        </main>
+    </body>
 </html>
