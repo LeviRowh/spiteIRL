@@ -13,6 +13,12 @@ const video = document.getElementById("v");
     const destStatusEl = document.getElementById("destStatus");
     const destinationListEl = document.getElementById("destinationList");
 
+    function safeOnClick(element, handler) {
+      if (element) {
+        element.addEventListener("click", handler);
+      }
+    }
+
     async function loadDestinations() {
       try {
         const res = await fetch("/api/destinations", { cache: "no-store" });
@@ -261,16 +267,16 @@ const video = document.getElementById("v");
       }
 
       // Button wiring
-      startBtn.addEventListener("click", startAndAutoLoad);
+      safeOnClick(startBtn, startAndAutoLoad);
 
-      reloadBtn.addEventListener("click", () => {
+      safeOnClick(stopBtn, stopStream);
+
+      safeOnClick(reloadBtn, () => {
         attachStream();
         setStatus(true, "reloaded");
       });
 
-      stopBtn.addEventListener("click", stopStream);
-
-      unmuteBtn.addEventListener("click", () => {
+      safeOnClick(unmuteBtn, () => {
         video.muted = false;
         safePlay();
       });
