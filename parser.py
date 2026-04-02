@@ -46,4 +46,11 @@ for line in lines:
     parsed_data.append(data)
 
 df = pd.DataFrame(parsed_data)
-print(df)
+
+df['bitrate'] = df['bitrate'].str.extract(r'(\d+\.?\d*)').astype(float)
+
+mean_frames = df['fps'].mean()
+mean_bitrate = df['bitrate'].mean()
+mean_quality = df['q'].mean()
+
+print("Average FPS: ", mean_frames, " Average bitrate: ", mean_bitrate, " Average quality: ", mean_quality)
