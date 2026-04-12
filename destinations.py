@@ -11,9 +11,11 @@ completely independent of it.
 from __future__ import annotations
 
 import os
+import main
 import signal
 import subprocess
 import threading
+from fastapi import Request
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -78,15 +80,25 @@ _destinations: dict[str, Destination] = {}
 _store_lock = threading.Lock()
 
 
-def add_destination(platform: str, stream_key: str, label: str) -> Destination:
+def add_destination(user_id: int, platform: str, stream_key: str, label: str) -> Destination:
     if platform not in PLATFORM_RTMP:
         raise ValueError(f"Unknown platform '{platform}'. Choose from: {list(PLATFORM_RTMP)}")
+    
     dest = Destination(
         id=str(uuid.uuid4()),
         platform=platform,
         stream_key=stream_key,
         label=label,
     )
+
+    db, cursor = main.get_db()
+
+    cursor.execute(
+        'INSERT INTO Destinations (user_id, platform, stream_key, label) VALUES (%s, %s, %s, %s)',
+        (user_id, platform, stream_key, label)
+    )
+    db.commit()
+    
     with _store_lock:
         _destinations[dest.id] = dest
     return dest
@@ -101,6 +113,29 @@ def get_destination(dest_id: str) -> Optional[Destination]:
     with _store_lock:
         return _destinations.get(dest_id)
 
+def load_user_destinations(user_id: int):
+    db, cursor = main.get_db()
+
+    cursor.execute(
+        "SELECT id, platform, stream_key, label FROM Destinations WHERE user_id = %s",
+        (int(user_id),)
+    )
+    rows = cursor.fetchall()
+
+    with _store_lock:
+        _destinations.clear()
+
+        for row in rows:
+            dest = Destination(
+                id=str(row[0]),
+                platform=row[1],
+                stream_key=row[2],
+                label=row[3],
+            )
+            _destinations[dest.id] = dest
+
+    cursor.close()
+    db.close()
 
 def remove_destination(dest_id: str) -> bool:
     with _store_lock:

@@ -6,7 +6,6 @@ import subprocess
 import threading
 from pathlib import Path
 from typing import Optional
-
 from fastapi import FastAPI, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -151,7 +150,7 @@ def status():
 
 
 @app.post("/api/start")
-def start():
+def start(request: Request):
     global ffmpeg_proc
 
     with ffmpeg_lock:
@@ -184,25 +183,35 @@ def start():
                 detail="ffmpeg not found. Install FFmpeg and make sure it's on PATH.",
             )
 
-    def _delayed_restream():
+    user_id = request.cookies.get("user")
+
+    def _delayed_restream(user_id):
         import time
         time.sleep(3)
         try:
+            if user_id:
+                dest_mgr.load_user_destinations(int(user_id))
+
             started = dest_mgr.start_all(CAPTURE_CONFIG)
             print("[destinations] started ids:", started)
+
             if started:
                 print(f"[destinations] Restreaming started for {len(started)} destination(s).")
             else:
                 print("[destinations] No destinations were started.")
+
         except FileNotFoundError:
             print("[destinations] ffmpeg not found — restream skipped.")
         except Exception as exc:
             print("[destinations] Restream failed:", exc)
 
-    threading.Thread(target=_delayed_restream, daemon=True).start()
+    threading.Thread(
+        target=_delayed_restream,
+        args=(user_id,),
+        daemon=True
+    ).start()
 
     return {"running": True, "message": "started"}
-
 
 @app.post("/api/stop")
 def stop():
@@ -250,13 +259,41 @@ class DestinationUpdate(BaseModel):
     enabled: bool
 
 @app.get("/api/destinations")
-def list_destinations():
-    return [d.to_dict() for d in dest_mgr.get_destinations()]
+def list_destinations(request: Request):
+    user_id = request.cookies.get("user")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not logged in")
+
+    db, cursor = get_db()
+    cursor.execute(
+        "SELECT id, user_id, platform, stream_key, label FROM Destinations WHERE user_id = %s",
+        (int(user_id),)
+    )
+    rows = cursor.fetchall()
+
+    destinations = []
+
+    for row in rows:
+        destinations.append({
+            "id": row[0],
+            "user_id": row[1],
+            "platform": row[2],
+            "stream_key": row[3],
+            "label": row[4],
+        })
+
+    return destinations
 
 @app.post("/api/destinations", status_code=201)
-def create_destination(body: DestinationCreate):
+def create_destination(body: DestinationCreate, request: Request):
+    user_id = request.cookies.get("user")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not logged in")
     try:
         dest = dest_mgr.add_destination(
+            user_id,
             platform=body.platform,
             stream_key=body.stream_key,
             label=body.label,
@@ -310,7 +347,7 @@ async def login(username: Annotated[str, Form()], password: Annotated[str, Form(
 
     if account:
         response = RedirectResponse(url="/dashboard", status_code=303)
-        response.set_cookie(key="user", value=username)
+        response.set_cookie(key="user", value=account[0])
         return response
     else:
         return HTMLResponse("""
