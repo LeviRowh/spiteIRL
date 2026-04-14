@@ -59,9 +59,9 @@ print("Average FPS: ", mean_frames, " Average bitrate: ", mean_bitrate, " Averag
 # Export q and fps with respect to time (using frame number) as JSON files
 q_data = df[['frame', 'q']].copy()
 q_data.columns = ['time', 'q']
-q_data.to_json('q_vs_time.json', orient='records', indent=2)
+q_data.to_json('static/q_vs_time.json', orient='records', indent=2)
 
 fps_data = df[['frame', 'fps']].copy()
 fps_data.columns = ['time', 'fps']
-fps_data.to_json('fps_vs_time.json', orient='records', indent=2)
+fps_data.to_json('static/fps_vs_time.json', orient='records', indent=2)
 
