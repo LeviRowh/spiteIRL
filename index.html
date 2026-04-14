@@ -6,6 +6,7 @@
         <link rel="stylesheet" href="static/style.css">
         <script src="/static/webAppCommands.js" defer></script>
         <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <title>Spite Dashboard</title>
     </head>
     <body>
@@ -48,6 +49,12 @@
                 <div id="destStatus"></div>
                 <div id="destinationList"></div>
             </div>
+            <!--Plot Statistics-->
+            <div>
+                <canvas id="fpsChart"></canvas>
+                <canvas id="qualityChart"></canvas>
+            </div>
+            <script src="plot.js"></script>
         </main>
     </body>
 </html>
