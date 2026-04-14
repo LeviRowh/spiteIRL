@@ -2,6 +2,7 @@ import re
 import glob
 import os
 import pandas as pd
+import matplotlib.pyplot as plt
 
 log_files = glob.glob("ffmpeg-*.log")
 if not log_files:
@@ -54,3 +55,13 @@ mean_bitrate = df['bitrate'].mean()
 mean_quality = df['q'].mean()
 
 print("Average FPS: ", mean_frames, " Average bitrate: ", mean_bitrate, " Average quality: ", mean_quality)
+
+# Export q and fps with respect to time (using frame number) as JSON files
+q_data = df[['frame', 'q']].copy()
+q_data.columns = ['time', 'q']
+q_data.to_json('q_vs_time.json', orient='records', indent=2)
+
+fps_data = df[['frame', 'fps']].copy()
+fps_data.columns = ['time', 'fps']
+fps_data.to_json('fps_vs_time.json', orient='records', indent=2)
+
