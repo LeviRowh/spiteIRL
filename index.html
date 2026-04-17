@@ -6,6 +6,7 @@
         <link rel="stylesheet" href="static/style.css">
         <script src="/static/webAppCommands.js" defer></script>
         <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <title>Spite Dashboard</title>
     </head>
     <body>
@@ -39,7 +40,6 @@
                         <option value="youtube">YouTube</option>
                         <option value="custom">Custom RTMP</option>
                     </select>
-
                     <input id="destLabel" type="text" placeholder="Label (ex: My YouTube)" />
                     <input id="streamKey" type="text" placeholder="Stream key or RTMP URL" />
                     <button id="addDestination">Add Destination</button>
@@ -48,6 +48,12 @@
                 <div id="destStatus"></div>
                 <div id="destinationList"></div>
             </div>
+            <!--Plot Statistics-->
+            <div id="charts">
+                <canvas id="fpsChart"></canvas>
+                <canvas id="qualityChart"></canvas>
+            </div>
+            <script src="/static/plot.js"></script>
         </main>
     </body>
 </html>
