@@ -21,7 +21,15 @@ const video = document.getElementById("v");
 
     async function loadDestinations() {
       try {
-        const res = await fetch("/api/destinations", { cache: "no-store" });
+        const res = await fetch("/api/destinations", {
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to load destinations");
+        }
+
         const destinations = await res.json();
 
         destinationListEl.innerHTML = "";
@@ -33,14 +41,9 @@ const video = document.getElementById("v");
 
         destinations.forEach(dest => {
           const div = document.createElement("div");
+          div.className = "destination-item";
           div.innerHTML = `
             <strong>${dest.label}</strong> (${dest.platform})
-            - enabled: ${dest.enabled}
-            - running: ${dest.running}
-            <button onclick="toggleDestination('${dest.id}', ${!dest.enabled})">
-              ${dest.enabled ? "Disable" : "Enable"}
-            </button>
-            <button onclick="deleteDestination('${dest.id}')">Delete</button>
           `;
           destinationListEl.appendChild(div);
         });
