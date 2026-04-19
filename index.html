@@ -10,50 +10,49 @@
         <title>Spite Dashboard</title>
     </head>
     <body>
-        <!--Wrapper-->
         <main>
-            <!--Header + Logout-->
             <header role="Banner">
                 <h2 id="title">Spite IRL</h2>
                 <form id="logout" action="/logout" method="get" style="display:inline;">
                     <button type="submit">Logout</button>
                 </form>
             </header>
-            <!--Preview Block-->
             <div class="block" role="main">
                 <h3>Preview</h3>
                 <video id="v" autoplay muted playsinline controls></video>
-                <!--Buttons-->
-                <div>
-                    <button id="start">Start stream</button>
-                    <button id="stop">Stop stream</button>
-                </div>
-                <div class="status" id="status">Status: Stopped</div>
+                <div class="status" id="status">Status: Loading...</div>
             </div>
-            <!--Destinations-->
             <div class="block" role="contentinfo">
-                <h3>Destination Streaming</h3>
-                <!--Destination Select-->
+                <h3>Stream Destinations</h3>
+                <p class="hint">Add a destination below, then press <strong>Go Live</strong> to start streaming to that platform.</p>
                 <div class="row">
-                    <label for="platform">Platform:</label><select id="platform">
+                    <label for="platform">Platform:</label>
+                    <select id="platform">
                         <option value="twitch">Twitch</option>
                         <option value="youtube">YouTube</option>
                         <option value="custom">Custom RTMP</option>
                     </select>
-                    <input id="destLabel" type="text" placeholder="Label (ex: My YouTube)" />
-                    <input id="streamKey" type="text" placeholder="Stream key or RTMP URL" />
+                    <label for="destLabel">Label:</label>
+                    <input id="destLabel" type="text" placeholder="e.g. My Twitch" />
+                    <label for="streamKey">Stream Key:</label>
+                    <input id="streamKey" type="password" placeholder="Paste your stream key here" />
                     <button id="addDestination">Add Destination</button>
                 </div>
-                <!--Destination Status-->
                 <div id="destStatus"></div>
                 <div id="destinationList"></div>
             </div>
-            <!--Plot Statistics-->
-            <div id="charts">
-                <canvas id="fpsChart"></canvas>
-                <canvas id="qualityChart"></canvas>
+            <div class="block charts-block">
+                <h3>Stream Metrics</h3>
+                <div class="charts-row">
+                    <div class="chart-wrap">
+                        <canvas id="fpsChart"></canvas>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="qualityChart"></canvas>
+                    </div>
+                </div>
+                <script src="/static/plot.js"></script>
             </div>
-            <script src="/static/plot.js"></script>
         </main>
     </body>
 </html>

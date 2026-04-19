@@ -65,3 +65,88 @@ header {
 .row {
     margin-bottom: 15px;
 }
+/* Destination rows */
+.dest-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+.platform-tag {
+    background: #eee;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.85em;
+    text-transform: capitalize;
+}
+.badge {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.85em;
+    color: white;
+}
+.badge.online {
+    background-color: #2e7d32;
+}
+.badge.offline {
+    background-color: #c62828;
+}
+.delete-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 4px 10px;
+}
+.hint {
+    color: #555;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+}
+
+/* Charts */
+.charts-block {
+    margin-top: 20px;
+}
+.charts-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.chart-wrap {
+    flex: 1;
+    min-width: 280px;
+    max-width: 600px;
+    height: 250px;
+    position: relative;
+}
+.chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .dest-row {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 10px 0;
+    }
+    .dest-row strong {
+        flex: 1 1 100%;
+    }
+    .row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .row input, .row select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    #v {
+        width: 100%;
+    }
+}

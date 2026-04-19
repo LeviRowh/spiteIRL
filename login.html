@@ -4,17 +4,28 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <link rel="stylesheet" href="/static/style.css">
-        <title>Spite Login</title>
+        <title>Spite IRL</title>
     </head>
     <header role="Banner">
         <h2 id="title">Spite IRL</h2>
     </header>
     <main>
-        <div class="block">
-            <h2>Login</h2>
+        <div class="block" id="key-block">
+            <h2>Enter Product Key</h2>
+            <form method="post" action="/verify-key">
+                <label for="key_code">Product Key:</label>
+                <input type="text" id="key_code" name="key_code" placeholder="Enter your product key" autocomplete="off"><br><br>
+                <button type="submit">Continue</button>
+            </form>
+            <div id="key-error" style="color:red;margin-top:10px;"></div>
+        </div>
+        <div class="block" id="auth-block" style="display:none;">
+            <h2>Login or Register</h2>
             <form method="post">
-                <label for="username">Username:</label><input type="text" id="username" name="username"><br><br>
-                <label for="password">Password:</label><input type="password" id="password" name="password"><br><br>
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username"><br><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password"><br><br>
                 <div>
                     <button type="submit" formaction="/login">Login</button>
                     <button type="submit" formaction="/register">Create Account</button>
