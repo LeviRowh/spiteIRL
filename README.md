@@ -291,5 +291,4 @@ sudo mysql -u root -p -e "INSERT INTO spite.product_keys (key_code) VALUES ('NEW
 
 ## P.S
 
-- I named this Spite out of spite for these big companies (you know the ones) selling these proucts at absurd prices and not even selling them all as one, typically you have to buy the backpack, data for the backpack, camera, webapp software, etc. with this you
-  only need to buy Raspberry Pi off amazon (very cheap), USB camera (also can be very cheap depending on the one you choose), and have a hotspot on your phone and you're good. Anyways happy streaming!!!
+- happy streaming!!!
