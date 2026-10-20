@@ -1,58 +1,64 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <link rel="stylesheet" href="static/style.css">
-        <script src="/static/webAppCommands.js" defer></script>
-        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <title>Spite Dashboard</title>
-    </head>
-    <body>
-        <main>
-            <header role="Banner">
-                <h2 id="title">Spite IRL</h2>
-                <form id="logout" action="/logout" method="get" style="display:inline;">
-                    <button type="submit">Logout</button>
-                </form>
-            </header>
-            <div class="block" role="main">
-                <h3>Preview</h3>
-                <video id="v" autoplay muted playsinline controls></video>
-                <div class="status" id="status">Status: Loading...</div>
-            </div>
-            <div class="block" role="contentinfo">
-                <h3>Stream Destinations</h3>
-                <p class="hint">Add a destination below, then press <strong>Go Live</strong> to start streaming to that platform.</p>
-                <div class="row">
-                    <label for="platform">Platform:</label>
-                    <select id="platform">
-                        <option value="twitch">Twitch</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="custom">Custom RTMP</option>
-                    </select>
-                    <label for="destLabel">Label:</label>
-                    <input id="destLabel" type="text" placeholder="e.g. My Twitch" />
-                    <label for="streamKey">Stream Key:</label>
-                    <input id="streamKey" type="password" placeholder="Paste your stream key here" />
-                    <button id="addDestination">Add Destination</button>
-                </div>
-                <div id="destStatus"></div>
-                <div id="destinationList"></div>
-            </div>
-            <div class="block charts-block">
-                <h3>Stream Metrics</h3>
-                <div class="charts-row">
-                    <div class="chart-wrap">
-                        <canvas id="fpsChart"></canvas>
-                    </div>
-                    <div class="chart-wrap">
-                        <canvas id="qualityChart"></canvas>
-                    </div>
-                </div>
-                <script src="/static/plot.js"></script>
-            </div>
-        </main>
-    </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpiteIRL Dashboard</title>
+<link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+<nav>
+  <a class="brand" href="/dashboard"><img src="/static/logo.png" alt="SpiteIRL"></a>
+  <button id="burger" aria-label="Menu" aria-expanded="false">&#9776;</button>
+  <div id="menu">
+    <a class="on" href="/dashboard">Dashboard</a>
+    <span class="muted" title="Connects in the cloud OBS update">OBS &#9662;</span>
+    <a href="#destinations">Settings &#9662;</a>
+    <span class="sp"></span>
+    <span id="destname" class="muted">No destination set</span>
+    <span class="muted">English &#9662;</span>
+    <button class="lnk warnc" id="shutdown">&#9211; Shutdown Pi</button>
+    <button class="lnk warnc" id="reboot">&#8635; Reboot</button>
+    <a class="bad" href="/logout">Logout</a>
+  </div>
+</nav>
+<div id="banner">There is no valid destination set. Set one in the <a href="#destinations">Destination Settings</a>.</div>
+<main>
+  <section class="card s2"><h3>Stream <span id="streamBadge" class="badge bad">Offline</span></h3>
+    <div class="body">
+      <button class="btn ok" id="start">&#9654; Start</button>
+      <button class="btn bad" id="stop">&#9632; Stop</button>
+    </div></section>
+  <section class="card s2"><h3>Ingest</h3>
+    <div class="body">
+      <div class="row"><b>Main Ingest</b><span id="ingBadge" class="badge bad">Offline</span></div>
+      <div class="btns"><button class="btn blue" id="mute">Mute</button><button class="btn blue" id="unmute">Unmute</button><button class="btn warn" id="fix">Fix</button></div>
+    </div></section>
+  <section class="card s2"><h3>Scene <span class="badge warn">Cloud OBS not connected</span></h3>
+    <div class="body">
+      <button class="btn blue" disabled>Starting Soon</button>
+      <button class="btn blue" disabled>BRB</button>
+      <button class="btn blue" disabled>Ingest</button>
+      <button class="btn blue" disabled>Ingest Low bitrate</button>
+      <button class="btn blue" disabled>Ingest Offline</button>
+    </div></section>
+  <section class="card s3"><h3>Ingest Preview <small>live</small></h3>
+    <div class="body"><video id="v" autoplay muted playsinline controls></video></div></section>
+  <section class="card s3"><h3>Ingest Bitrate <small>past 60 sec</small></h3>
+    <div class="body"><canvas id="chart" width="600" height="220"></canvas></div></section>
+  <section class="card s6" id="destCard"><h3>Destination Settings</h3>
+    <div class="body">
+      <div id="destList"></div>
+      <div class="form">
+        <select id="platform"><option value="twitch">Twitch</option><option value="youtube">YouTube</option><option value="custom">Custom RTMP</option></select>
+        <input id="label" placeholder="Label, e.g. My Twitch">
+        <input id="key" type="password" placeholder="Stream key or RTMP URL">
+        <button class="btn blue" id="add">Add destination</button>
+      </div>
+    </div></section>
+</main>
+<footer id="bar"><span id="barStream" class="badge bad">Stream Offline</span><span id="barIngest" class="badge bad">Main Ingest Offline</span></footer>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<script src="/static/dashboard.js"></script>
+</body>
 </html>

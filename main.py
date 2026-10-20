@@ -14,6 +14,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import destinations as dest_mgr
+import metrics
+from fastapi import Depends
+from session import current_user, require_user, set_session
+from dashboard_api import build_router
 from destinations import CaptureConfig
 
 import mysql.connector
@@ -201,7 +205,13 @@ def _ffmpeg_cmd(rtmp_destinations: list[str] = []) -> list[str]:
             "hls/stream.m3u8",
         ]
 
-    return cmd
+    return metrics.apply_mute(cmd)
+
+
+def _spawn(cmd):
+    proc = subprocess.Popen(cmd, cwd=str(BASE_DIR), preexec_fn=os.setsid, stderr=subprocess.PIPE)
+    metrics.attach(proc)
+    return proc
 
 
 def _clear_hls_folder() -> None:
@@ -224,13 +234,13 @@ def login_page():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
-    user = request.cookies.get("user")
+    user = current_user(request)
     if not user:
         return RedirectResponse(url="/")
     return HTMLResponse(INDEX_HTML.read_text(encoding="utf-8"))
 
 
-@app.get("/api/status")
+@app.get("/api/status", dependencies=[Depends(require_user)])
 def status():
     return {
         "running": _is_running(),
@@ -238,8 +248,7 @@ def status():
     }
 
 
-@app.post("/api/start")
-@app.post("/api/start")
+@app.post("/api/start", dependencies=[Depends(require_user)])
 def start():
     global ffmpeg_proc
     with ffmpeg_lock:
@@ -247,17 +256,13 @@ def start():
             return {"running": True, "message": "already running"}
         _clear_hls_folder()
         try:
-            ffmpeg_proc = subprocess.Popen(
-                _ffmpeg_cmd(),
-                cwd=str(BASE_DIR),
-                preexec_fn=os.setsid,
-            )
+            ffmpeg_proc = _spawn(_ffmpeg_cmd())
         except FileNotFoundError:
             raise HTTPException(status_code=500, detail="ffmpeg not found")
     return {"running": True, "message": "started"}
 
 
-@app.post("/api/stop")
+@app.post("/api/stop", dependencies=[Depends(require_user)])
 def stop():
     global ffmpeg_proc
     dest_mgr.stop_all()
@@ -288,14 +293,14 @@ class DestinationUpdate(BaseModel):
     enabled: bool
 
 
-@app.get("/api/destinations")
+@app.get("/api/destinations", dependencies=[Depends(require_user)])
 def list_destinations(request: Request):
-    user = request.cookies.get("user", "")
+    user = current_user(request)
     return [d.to_dict() for d in dest_mgr.get_destinations(user)]
 
-@app.post("/api/destinations", status_code=201)
+@app.post("/api/destinations", status_code=201, dependencies=[Depends(require_user)])
 def create_destination(request: Request, body: DestinationCreate):
-    user = request.cookies.get("user", "")
+    user = current_user(request)
     try:
         dest = dest_mgr.add_destination(
             platform=body.platform,
@@ -307,9 +312,9 @@ def create_destination(request: Request, body: DestinationCreate):
         raise HTTPException(status_code=400, detail=str(exc))
     return dest.to_dict()
 
-@app.patch("/api/destinations/{dest_id}")
+@app.patch("/api/destinations/{dest_id}", dependencies=[Depends(require_user)])
 def update_destination(dest_id: str, request: Request, body: DestinationUpdate):
-    user = request.cookies.get("user", "")
+    user = current_user(request)
     dest = dest_mgr.set_enabled(dest_id, body.enabled, user)
     if dest is None:
         raise HTTPException(status_code=404, detail="Destination not found")
@@ -317,17 +322,17 @@ def update_destination(dest_id: str, request: Request, body: DestinationUpdate):
         dest_mgr._stop_dest(dest)
     return dest.to_dict()
 
-@app.delete("/api/destinations/{dest_id}")
+@app.delete("/api/destinations/{dest_id}", dependencies=[Depends(require_user)])
 def delete_destination(dest_id: str, request: Request):
-    user = request.cookies.get("user", "")
+    user = current_user(request)
     removed = dest_mgr.remove_destination(dest_id, user)
     if not removed:
         raise HTTPException(status_code=404, detail="Destination not found")
     return {"deleted": True}
 
-@app.post("/api/destinations/{dest_id}/start")
+@app.post("/api/destinations/{dest_id}/start", dependencies=[Depends(require_user)])
 def start_destination(dest_id: str, request: Request):
-    user = request.cookies.get("user", "")
+    user = current_user(request)
     dest = dest_mgr.get_destination(dest_id, user)
     if dest is None:
         raise HTTPException(status_code=404, detail="Destination not found")
@@ -335,9 +340,9 @@ def start_destination(dest_id: str, request: Request):
     _restart_ffmpeg_with_destinations(user)
     return dest_mgr.get_destination(dest_id, user).to_dict()
 
-@app.post("/api/destinations/{dest_id}/stop")
+@app.post("/api/destinations/{dest_id}/stop", dependencies=[Depends(require_user)])
 def stop_destination(dest_id: str, request: Request):
-    user = request.cookies.get("user", "")
+    user = current_user(request)
     dest = dest_mgr.get_destination(dest_id, user)
     if dest is None:
         raise HTTPException(status_code=404, detail="Destination not found")
@@ -365,11 +370,7 @@ def _restart_ffmpeg_with_destinations(username: str = ""):
                 ffmpeg_proc = None
         _clear_hls_folder()
         try:
-            ffmpeg_proc = subprocess.Popen(
-                _ffmpeg_cmd(active_urls),
-                cwd=str(BASE_DIR),
-                preexec_fn=os.setsid,
-            )
+            ffmpeg_proc = _spawn(_ffmpeg_cmd(active_urls))
         except FileNotFoundError:
             raise HTTPException(status_code=500, detail="ffmpeg not found")
 
@@ -416,7 +417,7 @@ async def login_post(username: Annotated[str, Form()], password: Annotated[str, 
     account = cursor.fetchone()
     if account:
         response = RedirectResponse(url="/dashboard", status_code=303)
-        response.set_cookie(key="user", value=username)
+        set_session(response, username)
         return response
     return HTMLResponse("<h2>Login Failed</h2><a href='/'>Try again</a>")
 
@@ -437,12 +438,15 @@ async def register(request: Request, username: Annotated[str, Form()], password:
     cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed))
     db.commit()
     response = RedirectResponse(url="/dashboard", status_code=303)
-    response.set_cookie(key="user", value=username)
+    set_session(response, username)
     return response
 
 
 @app.get("/logout")
 def logout():
     response = RedirectResponse(url="/")
-    response.delete_cookie("user")
+    response.delete_cookie("session")
     return response
+
+
+app.include_router(build_router(_restart_ffmpeg_with_destinations, _is_running))
